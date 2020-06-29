@@ -1,0 +1,4 @@
+{
+  "mongoURI": "mongodb+srv://gmachat:Callie13@reactchesscluster-ovd7m.mongodb.net/<dbname>?retryWrites=true&w=majority",
+  "jwtSecret": "calliemollyjordy"
+}
