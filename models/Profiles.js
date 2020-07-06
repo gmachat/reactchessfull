@@ -8,6 +8,7 @@ const ProfileSchema = new mongoose.Schema({
   username: {
     type: String,
     unique: true,
+    maxlength: 10,
   },
   location: {
     type: String,
@@ -42,6 +43,10 @@ const ProfileSchema = new mongoose.Schema({
     default: [],
   },
   requestedFriends: {
+    type: Array,
+    default: [],
+  },
+  notifications: {
     type: Array,
     default: [],
   },
