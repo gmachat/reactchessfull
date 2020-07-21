@@ -50,6 +50,10 @@ const ProfileSchema = new mongoose.Schema({
     type: Array,
     default: [],
   },
+  newNotifications: {
+    type: Number,
+    default: 0,
+  },
 });
 
 module.exports = Profile = mongoose.model("profile", ProfileSchema);

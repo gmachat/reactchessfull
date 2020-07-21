@@ -195,8 +195,6 @@ router.delete("/", auth, async (req, res) => {
 router.patch("/addfriend", auth, async (req, res) => {
   try {
     let user = await Profile.findOne({ user: req.user.id });
-    console.log("req", req.user.id);
-    console.log("req2", req.body.profileId);
 
     if (user) {
       if (user.friends.includes(req.body.profileId)) {
@@ -255,7 +253,10 @@ router.patch("/addfriend", auth, async (req, res) => {
           console.log("requestor line 257", requestor);
           console.log("profile line 258", user);
 
-          return res.json(requestor);
+          return res.json({
+            requestor,
+            msg: "has accepted your friend request!",
+          });
         } catch (err) {
           return res.json({
             msg: `Something went wrong! Couldn't add user!`,
@@ -267,9 +268,9 @@ router.patch("/addfriend", auth, async (req, res) => {
           msg: `You have Already added this user!`,
         });
       } else {
-        let request = await Profile.findOne({ user: req.body.profileId });
+        let requestor = await Profile.findOne({ user: req.body.profileId });
         const requestedFriends = [...user.requestedFriends, req.body.profileId];
-        const friendRequests = [...request.friendRequests, req.user.id];
+        const friendRequests = [...requestor.friendRequests, req.user.id];
         //update
         try {
           let user = await Profile.findOneAndUpdate(
@@ -278,7 +279,7 @@ router.patch("/addfriend", auth, async (req, res) => {
             { new: true }
           );
 
-          let request = await Profile.findOneAndUpdate(
+          let requestor = await Profile.findOneAndUpdate(
             { user: req.body.profileId },
             { $set: { friendRequests } },
             { new: true }
@@ -286,7 +287,7 @@ router.patch("/addfriend", auth, async (req, res) => {
 
           // console.log(request.body);
           // console.log(profile.body);
-          return res.json(request);
+          return res.json({ requestor, msg: "has added you as a friend!" });
         } catch (err) {
           return res.json({
             msg: `Something went wrong! Couldn't add user!`,
@@ -355,10 +356,7 @@ router.patch("/cancelRequest", auth, async (req, res) => {
             { new: true }
           );
 
-          console.log("requestor line 363", requested);
-          console.log("profile line 364", user);
-
-          return res.json(requested);
+          return res.json({ requested });
         } catch (err) {
           return res.json({
             msg: `Something went wrong! Couldn't cancel Request!`,
@@ -376,9 +374,7 @@ router.patch("/cancelRequest", auth, async (req, res) => {
 router.patch("/removeFriend", auth, async (req, res) => {
   try {
     user = await Profile.findOne({ user: req.user.id });
-    console.log("req", req.user.id);
-    console.log("req2", req.body.profileId);
-    console.log(user.friends);
+
     if (user) {
       if (!user.friends.includes(req.body.profileId)) {
         return res.json({
@@ -449,6 +445,7 @@ router.patch("/sendNotification", auth, async (req, res) => {
   console.log("received note at backend");
   try {
     profile = await Profile.findOne({ user: req.body.userProfileId });
+    console.log(profile);
     if (profile) {
       try {
         profile = await Profile.findOneAndUpdate(
@@ -456,6 +453,7 @@ router.patch("/sendNotification", auth, async (req, res) => {
           {
             $set: {
               notifications: [...profile.notifications, req.body.notification],
+              newNotifications: profile.newNotifications + 1,
             },
           },
           { new: true }
@@ -510,33 +508,53 @@ router.get("/getNotifications", auth, async (req, res) => {
   }
 });
 
+router.get("/getNewNotifications", auth, async (req, res) => {
+  try {
+    profile = await Profile.findOne({ user: req.user.id }).select(
+      "newNotifications"
+    );
+    if (profile) {
+      res.status(200).json({
+        newNotifications: profile.newNotifications,
+      });
+    }
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send("Server Error");
+  }
+});
+
 router.patch("/seenNotifications", auth, async (req, res) => {
   try {
     let oldNotifications = await Profile.findOne({
       user: req.user.id,
-    }).select("notifications");
-
+    }).select("notifications newNotifications");
+    console.log(oldNotifications);
+    let newNotifications = oldNotifications.newNotifications;
     oldNotifications = oldNotifications.notifications;
-
     const notificationId = req.body.notificationId;
 
-    const checked = (() => {
+    (() => {
       if (oldNotifications.length === 0) return true;
       for (var i = 0; i < oldNotifications.length; i++) {
         if (oldNotifications[i].id === notificationId) {
-          oldNotifications[i].checked = true;
-          return oldNotifications[i];
+          if (!oldNotifications[i].checked) {
+            oldNotifications[i].checked = true;
+            newNotifications -= 1;
+            console.log("newnotifcations", newNotifications);
+            return oldNotifications[i];
+          }
         }
       }
     })();
 
-    console.log("oldnotificatasda", oldNotifications);
-    console.log(checked);
+    console.log("newnotif", newNotifications);
     profile = await Profile.findOneAndUpdate(
       { user: req.user.id },
       {
         $set: {
           notifications: oldNotifications,
+          newNotifications,
         },
       },
       { new: true }
@@ -544,12 +562,24 @@ router.patch("/seenNotifications", auth, async (req, res) => {
     if (oldNotifications) {
       res.status(200).json({
         notifications: oldNotifications,
+        newNotifications,
       });
     }
   } catch (err) {
     console.error(err.message);
     res.status(500).send("Server Error");
   }
+});
+
+router.get("/search/:query", auth, async (req, res) => {
+  console.log("supppppp");
+  let profiles = await Profile.find({ username: req.params.query }).select(
+    "user profilePicture username"
+  );
+  console.log(profiles);
+  res.status(200).json({
+    profiles,
+  });
 });
 
 module.exports = router;
