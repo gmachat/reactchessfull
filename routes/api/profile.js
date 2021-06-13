@@ -575,7 +575,7 @@ router.get("/search/:query", auth, async (req, res) => {
   console.log("supppppp");
   let profiles = await Profile.find({ username: req.params.query }).select(
     "user profilePicture username"
-  );
+   );
   console.log(profiles);
   res.status(200).json({
     profiles,
